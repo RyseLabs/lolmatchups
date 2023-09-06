@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Riot API Lookup</title>
     <link rel="stylesheet" href="styles.css">
-	<script src="https://cdn.jsdelivr.net/npm/vue@3.0.11"></script>
 
     <style>
       body {
@@ -278,7 +277,151 @@ p {
 }
 
     </style>
-    <script>
+    
+  </head>
+
+  <body>
+    <div id="app">
+      <h3 style="margin-top: -15px;">
+        lolmatchups.gg
+      </h3>
+      <div class="tabs-wrapper">
+        <div class="tab" :class="{ active: activeTab === 'live' }" @click="setActiveTab('live')"><b>Live Game</b></div>
+        <div class="tab" :class="{ active: activeTab === 'matchup' }" @click="setActiveTab('matchup')">
+          <b>Pick Champs</b></div>
+
+      </div>
+
+
+      <div class="loading-spinner" v-if="isLoading"></div>
+
+      <div class="tab-content" v-if="activeTab === 'live'">
+        <form class="search-form search-bar" @submit.prevent="getSummonerId">
+          <input class="summoner-input" v-model="summonerName" placeholder="Enter Summoner Name">
+          <button class="submit-button" :disabled="!summonerName" type="submit">🔍</button>
+        </form>
+
+        <span v-if="matchFound == false" class="error-text">Summoner isn't in a game</span>
+        <div v-if="summonerChampion" class="gallery">
+          <h5>
+            {{ summonerChampion.name }}
+          </h5>
+          <img :src="summonerChampion.image" alt="Summoner Champion">
+
+        </div>
+        <div v-if="enemyChampions" style="margin-top: 15px;" class="gallery">
+          <span>
+            <b>VS</b>
+          </span>
+          <h5 v-if="enemyChampion">
+            {{enemyChampion.name}}
+          </h5>
+          <img v-if="enemyChampion" :src="enemyChampion.image" alt="Summoner Champion">
+          <h5>
+            Select your opponent
+          </h5>
+          <div class="horiz-gallery">
+            <img v-for="champion in enemyChampions" :src="champion.image" :alt="champion.name" :class="{ 'selected': enemyChampion && champion.id === enemyChampion.id }" @click="selectChampion(champion)">
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content" v-if="activeTab === 'matchup'">
+
+        <form class="search-form search-bar" @submit.prevent="true">
+
+          <input class="summoner-input" @input="filterPlayerChampions" v-model="playerChampionName" @keyup.enter="selectFirstFilteredPlayerChampion" placeholder="Search champions">
+
+
+        </form>
+        <div class="autocomplete">
+          <div class="autocomplete-items" v-if="playerChampionName && filteredPlayerChampions.length">
+            <div v-for="item in filteredPlayerChampions" :key="item.name" @click="selectPlayerChampion(item)" class="autocomplete-item">
+              {{ item.name }}
+            </div>
+          </div>
+        </div>
+
+        <span v-if="summonerChampion == false" class="error-text">Summoner isn't in a game</span>
+        <div v-if="summonerChampion" class="gallery">
+          <h5>
+            {{summonerChampion.name}}
+          </h5>
+          <img :src="summonerChampion.image" alt="Summoner Champion">
+          <span style="margin-top: 15px;">
+            <b>VS</b>
+          </span>
+          <h5 v-if="enemyChampion">
+            {{enemyChampion.name}}
+          </h5>
+          <img v-if="enemyChampion" :src="enemyChampion.image" alt="Summoner Champion">
+          <h5>
+            Select your opponent
+          </h5>
+          <form style="margin: 3px;" class="search-form search-bar" @submit.prevent="true">
+
+            <input class="summoner-input" @input="filterEnemyChampions" v-model="enemyChampionName" @keyup.enter="selectFirstFilteredEnemyChampion" placeholder="Search champions">
+
+          </form>
+          <div class="autocomplete">
+            <div class="autocomplete-items" v-if="enemyChampionName && filteredEnemyChampions.length">
+              <div v-for="item in filteredEnemyChampions" :key="item.name" @click="selectEnemyChampion(item)" class="autocomplete-item">
+                {{ item.name }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div v-if="winConditionString" class="analysis-results">
+        <div class="analysis-container">
+          <h2>Analysis Results</h2>
+          <div class="section">
+            <h3>Objective to Win Lane</h3>
+            <div class="voting-system">
+              <button @click="decrementObjectiveTipVote">-1</button>
+              <span>{{ objectiveTipVotes }}</span>
+              <button @click="incrementObjectiveTipVote">+1</button>
+            </div>
+            <p id="objective"></p>
+          </div>
+
+          <div class="section">
+            <h3>Trading Patterns</h3>
+            <div class="voting-system">
+              <button @click="decrementTradingTipVote">-1</button>
+              <span>{{ tradingTipVotes }}</span>
+              <button @click="incrementTradingTipVote">+1</button>
+            </div>
+            <p id="patterns"></p>
+          </div>
+
+          <div class="section">
+            <h3>Counters</h3>
+            <div class="voting-system">
+              <button @click="decrementCounterTipVote">-1</button>
+              <span>{{ counterTipVotes }}</span>
+              <button @click="incrementCounterTipVote">+1</button>
+            </div>
+            <p id="counters"></p>
+          </div>
+
+          <div class="section">
+            <h3>Threats</h3>
+            <div class="voting-system">
+              <button @click="decrementThreatsTipVote">-1</button>
+              <span>{{ threatsTipVotes }}</span>
+              <button @click="incrementThreatsTipVote">+1</button>
+            </div>
+            <p id="threats"></p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script>
       const RIOT_API_BASE_URL = 'https://na1.api.riotgames.com/lol';
 
 const app = new Vue({
@@ -654,148 +797,6 @@ const app = new Vue({
 });
 
     </script>
-  </head>
-
-  <body>
-    <div id="app">
-      <h3 style="margin-top: -15px;">
-        lolmatchups.gg
-      </h3>
-      <div class="tabs-wrapper">
-        <div class="tab" :class="{ active: activeTab === 'live' }" @click="setActiveTab('live')"><b>Live Game</b></div>
-        <div class="tab" :class="{ active: activeTab === 'matchup' }" @click="setActiveTab('matchup')">
-          <b>Pick Champs</b></div>
-
-      </div>
-
-
-      <div class="loading-spinner" v-if="isLoading"></div>
-
-      <div class="tab-content" v-if="activeTab === 'live'">
-        <form class="search-form search-bar" @submit.prevent="getSummonerId">
-          <input class="summoner-input" v-model="summonerName" placeholder="Enter Summoner Name">
-          <button class="submit-button" :disabled="!summonerName" type="submit">🔍</button>
-        </form>
-
-        <span v-if="matchFound == false" class="error-text">Summoner isn't in a game</span>
-        <div v-if="summonerChampion" class="gallery">
-          <h5>
-            {{ summonerChampion.name }}
-          </h5>
-          <img :src="summonerChampion.image" alt="Summoner Champion">
-
-        </div>
-        <div v-if="enemyChampions" style="margin-top: 15px;" class="gallery">
-          <span>
-            <b>VS</b>
-          </span>
-          <h5 v-if="enemyChampion">
-            {{enemyChampion.name}}
-          </h5>
-          <img v-if="enemyChampion" :src="enemyChampion.image" alt="Summoner Champion">
-          <h5>
-            Select your opponent
-          </h5>
-          <div class="horiz-gallery">
-            <img v-for="champion in enemyChampions" :src="champion.image" :alt="champion.name" :class="{ 'selected': enemyChampion && champion.id === enemyChampion.id }" @click="selectChampion(champion)">
-          </div>
-        </div>
-      </div>
-
-      <div class="tab-content" v-if="activeTab === 'matchup'">
-
-        <form class="search-form search-bar" @submit.prevent="true">
-
-          <input class="summoner-input" @input="filterPlayerChampions" v-model="playerChampionName" @keyup.enter="selectFirstFilteredPlayerChampion" placeholder="Search champions">
-
-
-        </form>
-        <div class="autocomplete">
-          <div class="autocomplete-items" v-if="playerChampionName && filteredPlayerChampions.length">
-            <div v-for="item in filteredPlayerChampions" :key="item.name" @click="selectPlayerChampion(item)" class="autocomplete-item">
-              {{ item.name }}
-            </div>
-          </div>
-        </div>
-
-        <span v-if="summonerChampion == false" class="error-text">Summoner isn't in a game</span>
-        <div v-if="summonerChampion" class="gallery">
-          <h5>
-            {{summonerChampion.name}}
-          </h5>
-          <img :src="summonerChampion.image" alt="Summoner Champion">
-          <span style="margin-top: 15px;">
-            <b>VS</b>
-          </span>
-          <h5 v-if="enemyChampion">
-            {{enemyChampion.name}}
-          </h5>
-          <img v-if="enemyChampion" :src="enemyChampion.image" alt="Summoner Champion">
-          <h5>
-            Select your opponent
-          </h5>
-          <form style="margin: 3px;" class="search-form search-bar" @submit.prevent="true">
-
-            <input class="summoner-input" @input="filterEnemyChampions" v-model="enemyChampionName" @keyup.enter="selectFirstFilteredEnemyChampion" placeholder="Search champions">
-
-          </form>
-          <div class="autocomplete">
-            <div class="autocomplete-items" v-if="enemyChampionName && filteredEnemyChampions.length">
-              <div v-for="item in filteredEnemyChampions" :key="item.name" @click="selectEnemyChampion(item)" class="autocomplete-item">
-                {{ item.name }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div v-if="winConditionString" class="analysis-results">
-        <div class="analysis-container">
-          <h2>Analysis Results</h2>
-          <div class="section">
-            <h3>Objective to Win Lane</h3>
-            <div class="voting-system">
-              <button @click="decrementObjectiveTipVote">-1</button>
-              <span>{{ objectiveTipVotes }}</span>
-              <button @click="incrementObjectiveTipVote">+1</button>
-            </div>
-            <p id="objective"></p>
-          </div>
-
-          <div class="section">
-            <h3>Trading Patterns</h3>
-            <div class="voting-system">
-              <button @click="decrementTradingTipVote">-1</button>
-              <span>{{ tradingTipVotes }}</span>
-              <button @click="incrementTradingTipVote">+1</button>
-            </div>
-            <p id="patterns"></p>
-          </div>
-
-          <div class="section">
-            <h3>Counters</h3>
-            <div class="voting-system">
-              <button @click="decrementCounterTipVote">-1</button>
-              <span>{{ counterTipVotes }}</span>
-              <button @click="incrementCounterTipVote">+1</button>
-            </div>
-            <p id="counters"></p>
-          </div>
-
-          <div class="section">
-            <h3>Threats</h3>
-            <div class="voting-system">
-              <button @click="decrementThreatsTipVote">-1</button>
-              <span>{{ threatsTipVotes }}</span>
-              <button @click="incrementThreatsTipVote">+1</button>
-            </div>
-            <p id="threats"></p>
-          </div>
-
-        </div>
-      </div>
-    </div>
   </body>
 
 </html>
